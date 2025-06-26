@@ -10,9 +10,7 @@
 
 #include <GLFW/glfw3.h>
 
-
-static void glfw_error_callback(int error, const char* description)
-{
+static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
@@ -41,63 +39,36 @@ struct ScrollingBuffer {
     }
 };
 
-struct RollingBuffer {
-    float Span;
-    ImVector<ImVec2> Data;
-    RollingBuffer() {
-        Span = 10.0f;
-        Data.reserve(2000);
-    }
-    void AddPoint(float x, float y) {
-        float xmod = fmodf(x, Span);
-        if (!Data.empty() && xmod < Data.back().x)
-            Data.shrink(0);
-        Data.push_back(ImVec2(xmod, y));
-    }
-};
-
 void Demo_RealtimePlots() {
     ImGui::BulletText("Move your mouse to change the data!");
     ImGui::BulletText("This example assumes 60 FPS. Higher FPS requires larger buffer size.");
     static ScrollingBuffer sdata1, sdata2;
-    static RollingBuffer   rdata1, rdata2;
+
     ImVec2 mouse = ImGui::GetMousePos();
+
     static float t = 0;
     t += ImGui::GetIO().DeltaTime;
+
     sdata1.AddPoint(t, mouse.x * 0.0005f);
-    rdata1.AddPoint(t, mouse.x * 0.0005f);
     sdata2.AddPoint(t, mouse.y * 0.0005f);
-    rdata2.AddPoint(t, mouse.y * 0.0005f);
 
     static float history = 10.0f;
-    ImGui::SliderFloat("History",&history,1,30,"%.1f s");
-    rdata1.Span = history;
-    rdata2.Span = history;
+    ImGui::SliderFloat("History", &history, 1, 30, "%.1f s");
 
     static ImPlotAxisFlags flags = ImPlotAxisFlags_NoTickLabels;
 
-    if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1,150))) {
+    if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1, -1))) {
         ImPlot::SetupAxes(nullptr, nullptr, flags, flags);
-        ImPlot::SetupAxisLimits(ImAxis_X1,t - history, t, ImGuiCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1,0,1);
-        ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL,0.5f);
+        ImPlot::SetupAxisLimits(ImAxis_X1, t - history, t, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1);
+        ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
         ImPlot::PlotShaded("Mouse X", &sdata1.Data[0].x, &sdata1.Data[0].y, sdata1.Data.size(), -INFINITY, 0, sdata1.Offset, 2 * sizeof(float));
-        ImPlot::PlotLine("Mouse Y", &sdata2.Data[0].x, &sdata2.Data[0].y, sdata2.Data.size(), 0, sdata2.Offset, 2*sizeof(float));
-        ImPlot::EndPlot();
-    }
-    if (ImPlot::BeginPlot("##Rolling", ImVec2(-1,150))) {
-        ImPlot::SetupAxes(nullptr, nullptr, flags, flags);
-        ImPlot::SetupAxisLimits(ImAxis_X1,0,history, ImGuiCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1,0,1);
-        ImPlot::PlotLine("Mouse X", &rdata1.Data[0].x, &rdata1.Data[0].y, rdata1.Data.size(), 0, 0, 2 * sizeof(float));
-        ImPlot::PlotLine("Mouse Y", &rdata2.Data[0].x, &rdata2.Data[0].y, rdata2.Data.size(), 0, 0, 2 * sizeof(float));
+        ImPlot::PlotLine("Mouse Y", &sdata2.Data[0].x, &sdata2.Data[0].y, sdata2.Data.size(), 0, sdata2.Offset, 2 * sizeof(float));
         ImPlot::EndPlot();
     }
 }
 
-
-int main(int, char**)
-{
+int main(int, char**) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -108,20 +79,17 @@ int main(int, char**)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
-    GLFWwindow* window = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale), "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(540 * main_scale), (int)(400 * main_scale), "ImScope Scrollin plot and histogram", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
-
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-
 
     ImGui::StyleColorsDark();
 
@@ -134,11 +102,9 @@ int main(int, char**)
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-        {
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }
@@ -146,11 +112,20 @@ int main(int, char**)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        Demo_RealtimePlots();
 
-        ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
+
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(display_w/2, display_h/4));
+
+        {
+            ImGui::Begin("test", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            Demo_RealtimePlots();
+            ImGui::End();
+        }
+
+        ImGui::Render();
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
