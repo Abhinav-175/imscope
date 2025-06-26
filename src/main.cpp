@@ -18,7 +18,7 @@ struct ScrollingBuffer {
     int MaxSize;
     int Offset;
     ImVector<ImVec2> Data;
-    ScrollingBuffer(int max_size = 2000) {
+    ScrollingBuffer(int max_size = 5000) {
         MaxSize = max_size;
         Offset  = 0;
         Data.reserve(MaxSize);
@@ -40,17 +40,14 @@ struct ScrollingBuffer {
 };
 
 void Demo_RealtimePlots() {
-    ImGui::BulletText("Move your mouse to change the data!");
-    ImGui::BulletText("This example assumes 60 FPS. Higher FPS requires larger buffer size.");
-    static ScrollingBuffer sdata1, sdata2;
-
-    ImVec2 mouse = ImGui::GetMousePos();
-
+    static ScrollingBuffer sdata;
     static float t = 0;
-    t += ImGui::GetIO().DeltaTime;
-
-    sdata1.AddPoint(t, mouse.x * 0.0005f);
-    sdata2.AddPoint(t, mouse.y * 0.0005f);
+    
+    float x_val, y_val;
+    if (scanf("%f %f", &x_val, &y_val) == 2) {
+        sdata.AddPoint(t, x_val);
+        t += ImGui::GetIO().DeltaTime; 
+    }
 
     static float history = 10.0f;
     ImGui::SliderFloat("History", &history, 1, 30, "%.1f s");
@@ -60,10 +57,11 @@ void Demo_RealtimePlots() {
     if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1, -1))) {
         ImPlot::SetupAxes(nullptr, nullptr, flags, flags);
         ImPlot::SetupAxisLimits(ImAxis_X1, t - history, t, ImGuiCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -1, 1);
         ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
-        ImPlot::PlotShaded("Mouse X", &sdata1.Data[0].x, &sdata1.Data[0].y, sdata1.Data.size(), -INFINITY, 0, sdata1.Offset, 2 * sizeof(float));
-        ImPlot::PlotLine("Mouse Y", &sdata2.Data[0].x, &sdata2.Data[0].y, sdata2.Data.size(), 0, sdata2.Offset, 2 * sizeof(float));
+
+        ImPlot::PlotLine("uniform random", &sdata.Data[0].x, &sdata.Data[0].y, sdata.Data.size(), 0, sdata.Offset, 2 * sizeof(float));
+
         ImPlot::EndPlot();
     }
 }
@@ -79,7 +77,7 @@ int main(int, char**) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
-    GLFWwindow* window = glfwCreateWindow((int)(540 * main_scale), (int)(400 * main_scale), "ImScope Scrollin plot and histogram", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(540 * main_scale), (int)(400 * main_scale), "ImScope Scrolling plot and histogram", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -117,7 +115,7 @@ int main(int, char**) {
         glfwGetFramebufferSize(window, &display_w, &display_h);
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(display_w/2, display_h/4));
+        ImGui::SetNextWindowSize(ImVec2(display_w, display_h));
 
         {
             ImGui::Begin("test", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
