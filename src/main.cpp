@@ -1,12 +1,8 @@
+#include <iostream>
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <implot.h>
-#include <stdio.h>
-
-#include <math.h>
-#include <stdlib.h>
-#include <time.h>
 
 #include <GLFW/glfw3.h>
 
@@ -18,8 +14,7 @@ struct ScrollingBuffer {
     int MaxSize;
     int Offset;
     ImVector<ImVec2> Data;
-    ScrollingBuffer(int max_size = 5000) {
-        MaxSize = max_size;
+    ScrollingBuffer() {
         Offset  = 0;
         Data.reserve(MaxSize);
     }
@@ -40,28 +35,41 @@ struct ScrollingBuffer {
 };
 
 void Demo_RealtimePlots() {
-    static ScrollingBuffer sdata;
+    static ScrollingBuffer sdata10k; sdata10k.MaxSize = 10000;
     static float t = 0;
-    
-    float x_val, y_val;
-    if (scanf("%f %f", &x_val, &y_val) == 2) {
-        sdata.AddPoint(t, x_val);
+    double ticks[] = {t-9, t-8, t-7, t-6, t-5, t-4, t-3, t-2, t-1, t};
+    const char* tick_labels[] = {"9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0"};
+    float width = ImGui::GetContentRegionAvail().x;
+    // float height = ImGui::GetContentRegionAvail().y;
+
+    float x_val;
+    if (std::cin>> x_val) {
+        sdata10k.AddPoint(t, x_val);
         t += ImGui::GetIO().DeltaTime; 
     }
 
-    static float history = 10.0f;
-    ImGui::SliderFloat("History", &history, 1, 30, "%.1f s");
-
-    static ImPlotAxisFlags flags = ImPlotAxisFlags_NoTickLabels;
-
-    if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1, -1))) {
-        ImPlot::SetupAxes(nullptr, nullptr, flags, flags);
-        ImPlot::SetupAxisLimits(ImAxis_X1, t - history, t, ImGuiCond_Always);
+    if (ImPlot::BeginPlot("##Scrolling")) {
+        ImPlot::SetupAxisLimits(ImAxis_X1, t - 10.0f, t, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -1, 1);
-        ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
+        ImPlot::SetupAxisTicks(ImAxis_X1, ticks, 10, tick_labels);
+        ImPlot::PlotLine("uniform random", &sdata10k.Data[0].x, &sdata10k.Data[0].y, sdata10k.Data.size(), 0, sdata10k.Offset, 2 * sizeof(float));
+        ImPlot::EndPlot();
+    }
 
-        ImPlot::PlotLine("uniform random", &sdata.Data[0].x, &sdata.Data[0].y, sdata.Data.size(), 0, sdata.Offset, 2 * sizeof(float));
+    if (ImPlot::BeginPlot("##histogram", ImVec2(width*0.5, 350))) {
+        ImPlot::SetupAxisLimits(ImAxis_X1, -1, 1);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 150);
+        ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL,0.5f);
+        // ImPlot::PlotHistogram("uniform random", &sdata500.Data[0].y, sdata500.Data.size(), 150);
+        ImPlot::PlotHistogram("uniform random", &sdata10k.Data[0].y, sdata10k.Data.size(), 150, 1.0, ImPlotRange(-1, 1));
 
+        ImPlot::EndPlot();
+    }
+
+    ImGui::SameLine();
+    if (ImPlot::BeginPlot("##test", ImVec2(width*0.5, 350))) {
+        float data[] = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
+        ImPlot::PlotLine("My Data", data, 5);
         ImPlot::EndPlot();
     }
 }
@@ -77,7 +85,7 @@ int main(int, char**) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
-    GLFWwindow* window = glfwCreateWindow((int)(540 * main_scale), (int)(400 * main_scale), "ImScope Scrolling plot and histogram", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow((int)(540 * main_scale), (int)(700 * main_scale), "ImScope Scrolling plot and histogram", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
